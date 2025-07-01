@@ -13,7 +13,7 @@ from agents import (
     RunContextWrapper,
     function_tool,
     handoff,
-    run_agent_loop,
+    run_demo_loop,
 )
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from shared_types import AirlineAgentContext, RelevanceOutput, JailbreakOutput
@@ -570,7 +570,7 @@ async def main():
     }
     
     # Run the agent loop
-    await run_agent_loop(
+    await run_demo_loop(
         starting_agent=triage_agent,
         context=context,
         guardrails=guardrails,
