@@ -97,6 +97,7 @@ async def get_conference_schedule_tool(
         return result
 
     except Exception as e:
+        logger.error(f"Error in get_conference_schedule_tool: {e}")
         return f"Error retrieving conference schedule: {str(e)}"
 
 @function_tool(
@@ -146,6 +147,7 @@ async def search_attendees_tool(
         return result
 
     except Exception as e:
+        logger.error(f"Error in search_attendees_tool: {e}")
         return f"Error searching attendees: {str(e)}"
 
 @function_tool(
@@ -201,6 +203,7 @@ async def search_businesses_tool(
         return result
 
     except Exception as e:
+        logger.error(f"Error in search_businesses_tool: {e}")
         return f"Error searching businesses: {str(e)}"
 
 @function_tool(
@@ -257,6 +260,7 @@ async def get_user_businesses_tool(
         return result
 
     except Exception as e:
+        logger.error(f"Error in get_user_businesses_tool: {e}")
         return f"Error retrieving user businesses: {str(e)}"
 
 @function_tool(
@@ -317,6 +321,7 @@ async def add_business_tool(
             return f"Failed to add business '{company_name}'. Please try again or contact support."
 
     except Exception as e:
+        logger.error(f"Error in add_business_tool: {e}")
         return f"Error adding business: {str(e)}"
 
 @function_tool(
@@ -353,6 +358,7 @@ async def get_organization_info_tool(
         return result
 
     except Exception as e:
+        logger.error(f"Error in get_organization_info_tool: {e}")
         return f"Error retrieving organization information: {str(e)}"
 
 # =========================

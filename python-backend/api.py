@@ -26,7 +26,6 @@ from database import db_client
 from agents import (
     Agent,
     RunContextWrapper,
-    run_demo_loop,
 )
 
 # Configure logging
@@ -133,6 +132,149 @@ async def load_user_context(identifier: str) -> Optional[Dict[str, Any]]:
         logger.error(f"Error loading user context: {e}")
         return None
 
+async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, message: str) -> str:
+    """Execute agent with proper tool calling."""
+    try:
+        run_context = RunContextWrapper(context)
+        
+        # Check if message matches tool usage patterns for schedule agent
+        if agent.name == "Schedule Agent":
+            from main import get_conference_schedule_tool
+            
+            message_lower = message.lower()
+            
+            # Parse different types of schedule queries
+            if any(word in message_lower for word in ["events", "sessions", "schedule"]):
+                # Check for date patterns
+                if "july 15" in message_lower or "2025-07-15" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_date="2025-07-15")
+                elif "july 16" in message_lower or "2025-07-16" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_date="2025-07-16")
+                elif "september" in message_lower:
+                    # No events in September, but search anyway
+                    result = await get_conference_schedule_tool(run_context, conference_date="2025-09-01")
+                # Check for speaker names
+                elif "alice" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, speaker_name="Alice Wonderland")
+                elif "bob" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, speaker_name="Bob The Builder")
+                # Check for topics
+                elif "ai" in message_lower or "artificial intelligence" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, topic="AI")
+                elif "cloud" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, topic="Cloud")
+                elif "data" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, topic="Data")
+                # Check for tracks
+                elif "ai & ml" in message_lower or "ai ml" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="AI & ML")
+                elif "data science" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="Data Science")
+                elif "cloud computing" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="Cloud Computing")
+                elif "web development" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="Web Development")
+                elif "cybersecurity" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="Cybersecurity")
+                elif "product management" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="Product Management")
+                elif "startup" in message_lower or "entrepreneurship" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, track_name="Startup & Entrepreneurship")
+                # Check for rooms
+                elif "grand ballroom" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_room_name="Grand Ballroom")
+                elif "executive suite" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_room_name="Executive Suite 1")
+                elif "breakout room" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_room_name="Breakout Room A")
+                elif "innovation hub" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_room_name="Innovation Hub")
+                elif "networking lounge" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, conference_room_name="Networking Lounge")
+                else:
+                    # General search - get all sessions
+                    result = await get_conference_schedule_tool(run_context)
+                
+                return result
+        
+        # Check if message matches tool usage patterns for networking agent
+        elif agent.name == "Networking Agent":
+            from main import (
+                search_attendees_tool, 
+                search_businesses_tool, 
+                get_user_businesses_tool,
+                display_business_form_tool
+            )
+            
+            message_lower = message.lower()
+            
+            # Business-related queries
+            if any(word in message_lower for word in ["business", "company", "companies"]):
+                if "healthcare" in message_lower:
+                    result = await search_businesses_tool(run_context, sector="Healthcare")
+                elif "it" in message_lower or "technology" in message_lower:
+                    result = await search_businesses_tool(run_context, sector="Technology")
+                elif "mumbai" in message_lower:
+                    result = await search_businesses_tool(run_context, location="Mumbai")
+                elif "chennai" in message_lower:
+                    result = await search_businesses_tool(run_context, location="Chennai")
+                elif "my business" in message_lower or "tell me about my business" in message_lower:
+                    result = await get_user_businesses_tool(run_context)
+                elif "add" in message_lower and "business" in message_lower:
+                    result = await display_business_form_tool(run_context)
+                else:
+                    # General business search
+                    result = await search_businesses_tool(run_context)
+                
+                return result
+            
+            # Attendee-related queries
+            elif any(word in message_lower for word in ["attendee", "attendees", "people", "participant"]):
+                if "chennai" in message_lower:
+                    result = await search_attendees_tool(run_context, name="Chennai")
+                elif "mumbai" in message_lower:
+                    result = await search_attendees_tool(run_context, name="Mumbai")
+                elif "all" in message_lower:
+                    result = await search_attendees_tool(run_context, limit=20)
+                else:
+                    result = await search_attendees_tool(run_context, limit=10)
+                
+                return result
+        
+        # If no specific tool pattern matched, return a helpful response
+        if agent.name == "Schedule Agent":
+            return """I can help you find conference schedule information. You can ask me about:
+
+• Sessions by date - "What's happening on July 15th?" or "Events on July 16th"
+• Sessions by speaker - "Show me sessions by Alice Wonderland"
+• Sessions by topic - "Find AI sessions" or "Show me Cloud sessions"
+• Sessions by room - "What's in the Grand Ballroom?"
+• Sessions by track - "Show me Data Science track" or "AI & ML sessions"
+
+What specific schedule information are you looking for?"""
+        
+        elif agent.name == "Networking Agent":
+            return """I can help you with networking and business connections. You can ask me to:
+
+• Find attendees - "Find attendees from Chennai" or "Show me all attendees"
+• Search businesses - "Find healthcare businesses" or "Show me IT companies"
+• Get business info - "Show me businesses in Mumbai" or "Tell me about my business"
+• Add your business - "I want to add my business"
+
+What networking assistance do you need?"""
+        
+        else:
+            return """I'm your conference assistant for Business Conference 2025. I can help you with:
+
+🗓️ Conference Schedule - Find sessions, speakers, timings, and rooms
+🤝 Networking - Connect with attendees and explore business opportunities
+
+What would you like to know about the conference?"""
+            
+    except Exception as e:
+        logger.error(f"Error executing agent {agent.name}: {e}")
+        return f"I'm having trouble processing your request. Please try again or rephrase your question."
+
 # =========================
 # API ENDPOINTS
 # =========================
@@ -182,9 +324,6 @@ async def chat_endpoint(request: ChatRequest):
         all_agents = get_all_agents()
         current_agent = next((a for a in all_agents if a.name == current_agent_name), triage_agent)
         
-        # Create run context
-        run_context = RunContextWrapper(context)
-        
         # Process the message if provided
         if request.message.strip():
             # Check guardrails
@@ -192,7 +331,7 @@ async def chat_endpoint(request: ChatRequest):
             
             # Check relevance guardrail
             try:
-                relevance_result = await relevance_guardrail(run_context, request.message)
+                relevance_result = await relevance_guardrail(RunContextWrapper(context), request.message)
                 guardrail_results.append(serialize_guardrail_check(
                     "relevance_guardrail", 
                     relevance_result.is_relevant, 
@@ -229,7 +368,7 @@ async def chat_endpoint(request: ChatRequest):
             
             # Check jailbreak guardrail
             try:
-                jailbreak_result = await jailbreak_guardrail(run_context, request.message)
+                jailbreak_result = await jailbreak_guardrail(RunContextWrapper(context), request.message)
                 guardrail_results.append(serialize_guardrail_check(
                     "jailbreak_guardrail", 
                     jailbreak_result.is_safe, 
@@ -264,23 +403,19 @@ async def chat_endpoint(request: ChatRequest):
             except Exception as e:
                 logger.error(f"Error in jailbreak guardrail: {e}")
             
-            # Process message with current agent
+            # Route to appropriate agent based on message content
+            message_lower = request.message.lower()
+            
+            if any(word in message_lower for word in ["schedule", "session", "speaker", "event", "track", "room", "date", "time", "july", "september"]):
+                current_agent = schedule_agent
+            elif any(word in message_lower for word in ["business", "attendee", "networking", "company", "people", "participant"]):
+                current_agent = networking_agent
+            else:
+                current_agent = triage_agent
+            
+            # Execute agent with tools
             try:
-                # Get agent instructions
-                instructions = current_agent.instructions(run_context, current_agent)
-                
-                # Simple message processing - in a real implementation, you'd use the full agent system
-                response_message = f"I'm your conference assistant for {context.conference_name}. I can help you with:\n\n🗓️ Conference Schedule - Find sessions, speakers, timings, and rooms\n🤝 Networking - Connect with attendees and explore business opportunities\n\nWhat would you like to know about the conference?"
-                
-                # Check if this is a routing request
-                message_lower = request.message.lower()
-                
-                if any(word in message_lower for word in ["schedule", "session", "speaker", "event", "track", "room", "date", "time"]):
-                    current_agent = schedule_agent
-                    response_message = "I can help you find conference schedule information. You can ask me about:\n\n• Sessions by speaker - \"Show me sessions by Alice Wonderland\"\n• Sessions by topic - \"Find AI sessions\"\n• Sessions by room - \"What's in the Grand Ballroom?\"\n• Sessions by track - \"Show me Data Science track\"\n• Sessions by date - \"What's happening on July 15th?\"\n\nWhat specific schedule information are you looking for?"
-                elif any(word in message_lower for word in ["business", "attendee", "networking", "company", "people", "participant"]):
-                    current_agent = networking_agent
-                    response_message = "I can help you with networking and business connections. You can ask me to:\n\n• Find attendees - \"Find attendees from Chennai\" or \"Show me all attendees\"\n• Search businesses - \"Find healthcare businesses\" or \"Show me IT companies\"\n• Add your business - \"I want to add my business\"\n• Get business info - \"Show me businesses in Mumbai\"\n\nWhat networking assistance do you need?"
+                response_message = await execute_agent_with_tools(current_agent, context, request.message)
                 
                 messages.append({
                     "content": response_message,
