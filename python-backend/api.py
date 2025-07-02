@@ -175,13 +175,13 @@ async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, m
             message_lower = message.lower()
             
             # Parse different types of schedule queries
-            if any(word in message_lower for word in ["events", "sessions", "schedule"]):
+            if any(word in message_lower for word in ["events", "sessions", "schedule", "find", "show", "what"]):
                 # Check for date patterns
-                if "july 15" in message_lower or "2025-07-15" in message_lower:
+                if "july 15" in message_lower or "2025-07-15" in message_lower or "15th" in message_lower:
                     result = await get_conference_schedule_tool(run_context, conference_date="2025-07-15")
-                elif "july 16" in message_lower or "2025-07-16" in message_lower:
+                elif "july 16" in message_lower or "2025-07-16" in message_lower or "16th" in message_lower:
                     result = await get_conference_schedule_tool(run_context, conference_date="2025-07-16")
-                elif "september" in message_lower:
+                elif "september" in message_lower or "sept" in message_lower:
                     # No events in September, but search anyway
                     result = await get_conference_schedule_tool(run_context, conference_date="2025-09-01")
                 # Check for speaker names
@@ -189,6 +189,10 @@ async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, m
                     result = await get_conference_schedule_tool(run_context, speaker_name="Alice Wonderland")
                 elif "bob" in message_lower:
                     result = await get_conference_schedule_tool(run_context, speaker_name="Bob The Builder")
+                elif "charlie" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, speaker_name="Charlie Chaplin")
+                elif "diana" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, speaker_name="Diana Prince")
                 # Check for topics
                 elif "ai" in message_lower or "artificial intelligence" in message_lower:
                     result = await get_conference_schedule_tool(run_context, topic="AI")
@@ -196,8 +200,12 @@ async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, m
                     result = await get_conference_schedule_tool(run_context, topic="Cloud")
                 elif "data" in message_lower:
                     result = await get_conference_schedule_tool(run_context, topic="Data")
+                elif "web" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, topic="Web")
+                elif "security" in message_lower or "cybersecurity" in message_lower:
+                    result = await get_conference_schedule_tool(run_context, topic="Security")
                 # Check for tracks
-                elif "ai & ml" in message_lower or "ai ml" in message_lower:
+                elif "ai & ml" in message_lower or "ai ml" in message_lower or "machine learning" in message_lower:
                     result = await get_conference_schedule_tool(run_context, track_name="AI & ML")
                 elif "data science" in message_lower:
                     result = await get_conference_schedule_tool(run_context, track_name="Data Science")
@@ -234,10 +242,61 @@ async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, m
                 search_attendees_tool, 
                 search_businesses_tool, 
                 get_user_businesses_tool,
-                display_business_form_tool
+                display_business_form_tool,
+                add_business_tool
             )
             
             message_lower = message.lower()
+            
+            # Check for business form submission (structured data)
+            if "i want to add my business with the following details:" in message_lower:
+                # Parse business details from the message
+                lines = message.split('\n')
+                business_data = {}
+                
+                for line in lines:
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip().lower()
+                        value = value.strip()
+                        
+                        if 'company name' in key:
+                            business_data['company_name'] = value
+                        elif 'industry sector' in key:
+                            business_data['industry_sector'] = value
+                        elif 'sub-sector' in key or 'sub sector' in key:
+                            business_data['sub_sector'] = value
+                        elif 'location' in key:
+                            business_data['location'] = value
+                        elif 'position title' in key:
+                            business_data['position_title'] = value
+                        elif 'legal structure' in key:
+                            business_data['legal_structure'] = value
+                        elif 'establishment year' in key:
+                            business_data['establishment_year'] = value
+                        elif 'products/services' in key or 'products or services' in key:
+                            business_data['products_or_services'] = value
+                        elif 'brief description' in key:
+                            business_data['brief_description'] = value
+                        elif 'website' in key:
+                            business_data['website'] = value
+                
+                # Call add_business_tool with parsed data
+                if len(business_data) >= 8:  # Ensure we have most required fields
+                    result = await add_business_tool(
+                        run_context,
+                        company_name=business_data.get('company_name', ''),
+                        industry_sector=business_data.get('industry_sector', ''),
+                        sub_sector=business_data.get('sub_sector', ''),
+                        location=business_data.get('location', ''),
+                        position_title=business_data.get('position_title', ''),
+                        legal_structure=business_data.get('legal_structure', ''),
+                        establishment_year=business_data.get('establishment_year', ''),
+                        products_or_services=business_data.get('products_or_services', ''),
+                        brief_description=business_data.get('brief_description', ''),
+                        website=business_data.get('website')
+                    )
+                    return result
             
             # Business-related queries
             if any(word in message_lower for word in ["business", "company", "companies"]):
@@ -245,10 +304,18 @@ async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, m
                     result = await search_businesses_tool(run_context, sector="Healthcare")
                 elif "it" in message_lower or "technology" in message_lower:
                     result = await search_businesses_tool(run_context, sector="Technology")
+                elif "finance" in message_lower:
+                    result = await search_businesses_tool(run_context, sector="Finance")
+                elif "manufacturing" in message_lower:
+                    result = await search_businesses_tool(run_context, sector="Manufacturing")
                 elif "mumbai" in message_lower:
                     result = await search_businesses_tool(run_context, location="Mumbai")
                 elif "chennai" in message_lower:
                     result = await search_businesses_tool(run_context, location="Chennai")
+                elif "delhi" in message_lower:
+                    result = await search_businesses_tool(run_context, location="Delhi")
+                elif "bangalore" in message_lower or "bengaluru" in message_lower:
+                    result = await search_businesses_tool(run_context, location="Bangalore")
                 elif "my business" in message_lower or "tell me about my business" in message_lower:
                     result = await get_user_businesses_tool(run_context)
                 elif "add" in message_lower and "business" in message_lower:
@@ -260,11 +327,15 @@ async def execute_agent_with_tools(agent: Agent, context: AirlineAgentContext, m
                 return result
             
             # Attendee-related queries
-            elif any(word in message_lower for word in ["attendee", "attendees", "people", "participant"]):
+            elif any(word in message_lower for word in ["attendee", "attendees", "people", "participant", "participants"]):
                 if "chennai" in message_lower:
                     result = await search_attendees_tool(run_context, name="Chennai")
                 elif "mumbai" in message_lower:
                     result = await search_attendees_tool(run_context, name="Mumbai")
+                elif "delhi" in message_lower:
+                    result = await search_attendees_tool(run_context, name="Delhi")
+                elif "bangalore" in message_lower or "bengaluru" in message_lower:
+                    result = await search_attendees_tool(run_context, name="Bangalore")
                 elif "all" in message_lower:
                     result = await search_attendees_tool(run_context, limit=20)
                 else:
@@ -340,12 +411,12 @@ async def chat_endpoint(request: ChatRequest):
                     customer = user_info["customer"]
                     context.passenger_name = customer.get("name")
                     context.customer_id = customer.get("id")
-                    context.account_number = customer.get("account_number")
+                    context.account_number = str(customer.get("account_number", ""))
                     context.customer_email = customer.get("email")
                     context.is_conference_attendee = customer.get("is_conference_attendee", True)
                     context.conference_name = customer.get("conference_name", "Business Conference 2025")
                     context.user_location = customer.get("location")
-                    context.user_registration_id = customer.get("registration_id")
+                    context.user_registration_id = str(customer.get("registration_id", ""))
                     context.user_conference_package = customer.get("conference_package")
                     context.user_primary_stream = customer.get("primary_stream")
                     context.user_secondary_stream = customer.get("secondary_stream")
@@ -437,7 +508,10 @@ async def chat_endpoint(request: ChatRequest):
             # Route to appropriate agent based on message content
             message_lower = request.message.lower()
             
-            if any(word in message_lower for word in ["schedule", "session", "speaker", "event", "track", "room", "date", "time", "july", "september"]):
+            # Check for business form submission first
+            if "i want to add my business with the following details:" in message_lower:
+                current_agent = networking_agent
+            elif any(word in message_lower for word in ["schedule", "session", "speaker", "event", "track", "room", "date", "time", "july", "september", "find sessions", "show sessions"]):
                 current_agent = schedule_agent
             elif any(word in message_lower for word in ["business", "attendee", "networking", "company", "people", "participant"]):
                 current_agent = networking_agent
