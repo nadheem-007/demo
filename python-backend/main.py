@@ -365,7 +365,6 @@ async def get_organization_info_tool(
 # GUARDRAILS
 # =========================
 
-@function_tool
 async def relevance_guardrail(
     context: RunContextWrapper[AirlineAgentContext], user_input: str
 ) -> RelevanceOutput:
@@ -395,7 +394,6 @@ async def relevance_guardrail(
             is_relevant=False
         )
 
-@function_tool
 async def jailbreak_guardrail(
     context: RunContextWrapper[AirlineAgentContext], user_input: str
 ) -> JailbreakOutput:
