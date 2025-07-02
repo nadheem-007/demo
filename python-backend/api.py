@@ -80,13 +80,44 @@ def get_all_agents():
 
 def serialize_agent(agent: Agent) -> Dict[str, Any]:
     """Serialize an agent for API response."""
-    return {
-        "name": agent.name,
-        "description": agent.handoff_description or "",
-        "handoffs": [h.target.name for h in agent.handoffs],
-        "tools": [tool.__name__ for tool in agent.tools],
-        "input_guardrails": agent.input_guardrails or [],
-    }
+    try:
+        # Safely extract handoff names
+        handoff_names = []
+        if hasattr(agent, 'handoffs') and agent.handoffs:
+            for handoff in agent.handoffs:
+                if hasattr(handoff, 'target') and hasattr(handoff.target, 'name'):
+                    handoff_names.append(handoff.target.name)
+                elif hasattr(handoff, 'name'):
+                    handoff_names.append(handoff.name)
+                else:
+                    # Try to get string representation
+                    handoff_names.append(str(handoff))
+        
+        # Safely extract tool names
+        tool_names = []
+        if hasattr(agent, 'tools') and agent.tools:
+            for tool in agent.tools:
+                if hasattr(tool, '__name__'):
+                    tool_names.append(tool.__name__)
+                else:
+                    tool_names.append(str(tool))
+        
+        return {
+            "name": agent.name,
+            "description": agent.handoff_description or "",
+            "handoffs": handoff_names,
+            "tools": tool_names,
+            "input_guardrails": getattr(agent, 'input_guardrails', []) or [],
+        }
+    except Exception as e:
+        logger.error(f"Error serializing agent {agent.name}: {e}")
+        return {
+            "name": agent.name,
+            "description": getattr(agent, 'handoff_description', '') or "",
+            "handoffs": [],
+            "tools": [],
+            "input_guardrails": [],
+        }
 
 def serialize_event(event: Any) -> Dict[str, Any]:
     """Serialize an event for API response."""
